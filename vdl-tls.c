@@ -32,6 +32,12 @@ file_initialize (struct VdlFile *file)
     {
       file->has_tls = 0;
       file->tls_initialized = 1;
+      // For binaries compiled without TLS we both
+      // alignment requirements (0,1) mean thee same (unaligned)
+      // We initialize prefer value 1 to avoid 0 division in
+      // vdl_tls_file_initialize_main during calculation of
+      // total alignment requirement
+      file->tls_align = 1;
       return;
     }
   file->has_tls = 1;
@@ -39,7 +45,9 @@ file_initialize (struct VdlFile *file)
   file->tls_tmpl_start = file->load_base + pt_tls->p_vaddr;
   file->tls_tmpl_size = pt_tls->p_filesz;
   file->tls_init_zero_size = pt_tls->p_memsz - pt_tls->p_filesz;
-  file->tls_align = pt_tls->p_align;
+  // Both 0 and 1 are same alignment, prefer 1 to avoid null division
+  // in vdl_tls_file_initialize_main
+  file->tls_align = vdl_utils_max(pt_tls->p_align, 1);
   file->tls_index = g_vdl.tls_next_index;
   vdl_hashmap_insert (g_vdl.module_map, file->tls_index, file);
   file->tls_is_static = (dt_flags & DF_STATIC_TLS) || file->is_executable;
@@ -100,7 +108,7 @@ initialize_static_tls (struct VdlList *list)
   // next (the TLS relocations need the tls_offset field).
   unsigned long tcb_size = g_vdl.tls_static_current_size;
   unsigned long n_dtv = 0;
-  unsigned long max_align = g_vdl.tls_static_align;
+  unsigned long max_align = vdl_utils_max(g_vdl.tls_static_align, 1);
   void **cur;
   for (cur = vdl_list_begin (list);
        cur != vdl_list_end (list);

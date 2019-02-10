@@ -2,6 +2,8 @@ project(elf-loader C CXX ASM)
 
 cmake_minimum_required(VERSION 2.8.8 FATAL_ERROR)
 
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
 macro(add_cflags)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ARGN}")
 endmacro(add_cflags)
